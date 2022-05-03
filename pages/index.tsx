@@ -1,11 +1,22 @@
 
 import { FormEvent, useState } from 'react'
 import { SearchResults } from '../components/SearchResults';
-import styles from '../styles/Home.module.css'
+
+type Results = {
+  totalPrice: number;
+  data: any[];
+}
 
 export default function Home() {
-  const [results, setResults] = useState([])
   const [search, setSearch] = useState('');
+  const [results, setResults] = useState<Results>({
+    totalPrice: 0,
+    data: [],
+  });
+  
+  async function addToWishList(id: number) {
+    console.log(id);
+  }
   async function handleSearch(event: FormEvent) {
 
     event.preventDefault();
@@ -13,10 +24,26 @@ export default function Home() {
       return;
     }
 
-    const response = await fetch(`http://localhost:3333/products?q${search}`)
+    const response = await fetch(`http://localhost:3333/products?q=${search}`)
     const data = await response.json(); 
-    setResults(data)
-    setSearch('')
+
+    const formatter = new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    });
+
+    const products = data.map(product => {
+      return {
+        id: product.id,
+        title: product.title,
+        price: product.price,
+        priceFormatted: formatter.format(product.price)
+      }
+    })
+    const totalPrice = data.reduce((total, product) => {
+      return total + product.price;
+    }, 0)
+    setResults({totalPrice, data: products})
   }
   
   return (
@@ -25,10 +52,12 @@ export default function Home() {
         Search
       </h1>
       <form onSubmit={handleSearch}>
-        <input type="text" value={search} onChange={e => setSearch(e.target.value)}></input>
+        <input type="text" value={search} onChange={e => setSearch(e.target.value)} />
         <button>Buscar</button>
       </form>
-      <SearchResults results={results} />
+      <SearchResults results={results.data}
+      totalPrice={results.totalPrice}
+      onAddToWishList={addToWishList} />
     </div>
   )
 }
